@@ -1,81 +1,21 @@
 import Foundation
 
-/// Presents a list of options in the terminal for the user to choose
-/// from, highlighting the current selection based on the provided
-/// configuration. Blocks until the user makes a selection.
+/// Presents a list of options in the terminal for the user to choose from,
+/// highlighting the current selection. Blocks until the user makes a selection.
 ///
-/// - Parameters:
-///   - options: An array of `String` representing the options from
-///     which the user can choose.
-///   - config: An optional `PickerConfiguration` object to customize
-///     the appearance of the picker. Includes colors and indicators for
-///     selected and unselected items. Defaults to `.default` if not
-///     provided.
-///
-/// - Returns: A `String` representing the user's selected option.
+/// - Parameter options: An array of options which the user can choose.
+/// - Returns: The selected option the user selected.
 ///
 /// ## Example Usage
 ///
 /// ```swift
 /// let options = ["Apples", "Bananas", "Oranges", "Grapefruit"]
-///
-/// // Using default configuration
 /// let selection = try choose(options)
 /// print("Selection: \(selection)")
-///
-/// // Using custom configuration
-/// var config = PickerConfiguration()
-/// config.itemIndicator = "->"
-/// config.itemColor = .cyan
-/// config.selectionIndicator = "➜"
-/// config.selectionColor = .green
-///
-/// let selection = try choose(options, config: config)
-/// print("Selection: \(selection)")
 /// ```
-///
-/// This function allows for basic customization of the picker's
-/// appearance, including the color and symbols used to indicate the
-/// current selection and other items.
-public func choose(
-    _ options: [String],
-    config: PickerConfiguration = .default
-) throws -> String {
-    var picker = Picker(options: options, config: config)
-    return try picker.choose()
-}
-
-enum PickerError: Swift.Error {
-    case cursorPositionUnavailable
-}
-
-public struct PickerConfiguration {
-    public typealias Color = String
-
-    var itemIndicator: String = " "
-    var itemColor: Color = .default
-    var selectionIndicator: String = "➜"
-    var selectionColor: Color = .green
-
-    public static let `default` = PickerConfiguration()
-}
-
-public extension PickerConfiguration.Color {
-    init(code: UInt8) {
-        self.init("\u{1B}[\(code)m")
-    }
-
-    static let `default` = PickerConfiguration.Color(code: 39)
-    static let black = PickerConfiguration.Color(code: 30)
-    static let red = PickerConfiguration.Color(code: 31)
-    static let green = PickerConfiguration.Color(code: 32)
-    static let yellow = PickerConfiguration.Color(code: 93)
-    static let blue = PickerConfiguration.Color(code: 34)
-    static let magenta = PickerConfiguration.Color(code: 35)
-    static let cyan = PickerConfiguration.Color(code: 36)
-    static let gray = PickerConfiguration.Color(code: 37)
-    static let darkGray = PickerConfiguration.Color(code: 90)
-    static let white = PickerConfiguration.Color(code: 97)
+public func choose(_ options: [String]) throws -> String {
+    var picker = Picker()
+    return try picker.choose(options)
 }
 
 private var originalTerminal: termios?
@@ -86,13 +26,25 @@ private func handleSignal(signal: Int32) {
     exit(signal)
 }
 
-private struct Picker {
-    private let options: [String]
-    private let config: PickerConfiguration
+/// The `Picker` struct provides an interactive picker for use in the terminal,
+/// allowing the user to choose from a list of options. It supports basic
+/// customization of the presentation, like changing the indicators and colors.
+public struct Picker {
+    public var itemIndicator: String = " "
+    public var itemColor: Color = .default
+    public var selectionIndicator: String = "➜"
+    public var selectionColor: Color = .green
+
+    public enum Error: Swift.Error {
+        case cursorPositionUnavailable
+    }
+
+    public typealias Color = String
+
     private var initialLine: Int = 0
     private var currentSelection: Int = 0
 
-    enum ControlCharacter: UnicodeScalar {
+    private enum ControlCharacter: UnicodeScalar {
         case escape = "\u{1B}"
         case leftBracket = "["
         case upArrow = "A"
@@ -101,12 +53,37 @@ private struct Picker {
         case carriageReturn = "\u{0D}" // Carriage Return
     }
 
-    init(options: [String], config: PickerConfiguration) {
-        self.options = options
-        self.config = config
-    }
+    /// Initializes a new `Picker` instance with default configurations.
+    ///
+    /// Use this initializer to create a Picker with default item and selection
+    /// indicators, as well as default colors for items and the selection.
+    public init() {}
 
-    mutating func choose() throws -> String {
+    /// Presents the given options in the terminal and blocks until the user
+    /// makes a selection. The user can navigate through the options using the
+    /// arrow keys and make a selection by pressing Enter.
+    ///
+    /// - Parameter options: An array of options which the user can choose.
+    /// - Returns: The selected option the user selected.
+    ///
+    /// ## Example Usage
+    ///
+    /// ```swift
+    /// var picker = Picker()
+    /// picker.itemIndicator = "○"
+    /// picker.itemColor = .red
+    /// picker.selectionIndicator = "●"
+    /// picker.selectionColor = .green
+    ///
+    /// let selection = try picker.choose([
+    ///     "Apple",
+    ///     "Banana",
+    ///     "Orange",
+    ///     "Watermelon"
+    /// ])
+    /// print("Selection: ", selection)
+    /// ```
+    public mutating func choose(_ options: [String]) throws -> String {
         originalTerminal = nil
         enableNonCanonicalMode()
         defer { restoreTerminalMode() }
@@ -116,11 +93,11 @@ private struct Picker {
         }
 
         guard let currentLine = readCurrentLine() else {
-            throw PickerError.cursorPositionUnavailable
+            throw Error.cursorPositionUnavailable
         }
 
         initialLine = currentLine - options.count
-        updateSelection()
+        updateSelection(options)
 
         loop: while true {
             let key = readControlCharacter()
@@ -147,13 +124,13 @@ private struct Picker {
                 continue
             }
 
-            updateSelection()
+            updateSelection(options)
         }
 
         return options[currentSelection]
     }
 
-    private func updateSelection() {
+    private func updateSelection(_ options: [String]) {
         for (index, option) in options.enumerated() {
             moveCursor(initialLine + index)
             printOption(option, at: index)
@@ -161,11 +138,11 @@ private struct Picker {
     }
 
     private func printOption(_ option: String, at index: Int) {
-        let resetColor = "\u{1B}[0m"
+        let resetCode = "\u{1B}[0m"
         if index == currentSelection {
-            print("\(config.selectionColor)\(config.selectionIndicator) \(option)\(resetColor)")
+            print("\(selectionColor)\(selectionIndicator) \(option)\(resetCode)")
         } else {
-            print("\(config.itemColor)\(config.itemIndicator) \(option)\(resetColor)")
+            print("\(itemColor)\(itemIndicator) \(option)\(resetCode)")
         }
     }
 
@@ -238,4 +215,22 @@ private struct Picker {
 
         return nil
     }
+}
+
+public extension Picker.Color {
+    init(code: UInt8) {
+        self.init("\u{1B}[\(code)m")
+    }
+
+    static let `default` = Picker.Color(code: 39)
+    static let black = Picker.Color(code: 30)
+    static let red = Picker.Color(code: 31)
+    static let green = Picker.Color(code: 32)
+    static let yellow = Picker.Color(code: 93)
+    static let blue = Picker.Color(code: 34)
+    static let magenta = Picker.Color(code: 35)
+    static let cyan = Picker.Color(code: 36)
+    static let gray = Picker.Color(code: 37)
+    static let darkGray = Picker.Color(code: 90)
+    static let white = Picker.Color(code: 97)
 }
