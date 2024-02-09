@@ -18,14 +18,6 @@ public func choose(_ options: [String]) throws -> String {
     return try picker.choose(options)
 }
 
-private var originalTerminal: termios?
-
-private func handleSignal(signal: Int32) {
-    guard var originalTerminal else { return }
-    tcsetattr(STDIN_FILENO, TCSANOW, &originalTerminal)
-    exit(signal)
-}
-
 /// The `Picker` struct provides an interactive picker for use in the terminal,
 /// allowing the user to choose from a list of options. It supports basic
 /// customization of the presentation, like changing the indicators and colors.
@@ -85,8 +77,14 @@ public struct Picker {
     /// ```
     public mutating func choose(_ options: [String]) throws -> String {
         originalTerminal = nil
+        
+        disableCursor()
         enableNonCanonicalMode()
-        defer { restoreTerminalMode() }
+
+        defer {
+            enableCursor()
+            restoreTerminalMode()
+        }
 
         for (index, option) in options.enumerated() {
             printOption(option, at: index)
@@ -168,6 +166,14 @@ public struct Picker {
         fflush(stdout)
     }
 
+    private func disableCursor() {
+        print("\u{1B}[?25l", terminator: "")
+    }
+
+    private func enableCursor() {
+        print("\u{1B}[?25h", terminator: "")
+    }
+
     private func enableNonCanonicalMode() {
         // Switch standard input to non-canonical mode to read the response immediately.
         var terminal = termios()
@@ -233,4 +239,13 @@ public extension Picker.Color {
     static let gray = Picker.Color(code: 37)
     static let darkGray = Picker.Color(code: 90)
     static let white = Picker.Color(code: 97)
+}
+
+private var originalTerminal: termios?
+
+private func handleSignal(signal: Int32) {
+    guard var originalTerminal else { return }
+    tcsetattr(STDIN_FILENO, TCSANOW, &originalTerminal)
+    print("\u{1B}[?25h", terminator: "")
+    exit(signal)
 }
