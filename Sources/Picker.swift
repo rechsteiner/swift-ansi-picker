@@ -22,9 +22,22 @@ public func choose(_ options: [String]) throws -> String {
 /// allowing the user to choose from a list of options. It supports basic
 /// customization of the presentation, like changing the indicators and colors.
 public struct Picker {
+    /// The symbol or character used to indicate items in the selection list.
+    /// This indicator is displayed in front of each option.
     public var itemIndicator: String = " "
+
+    /// The color used for displaying the items in the selection list. This
+    /// color applies to the text of each option.
     public var itemColor: Color = .default
+
+    /// The symbol or character used to indicate the currently selected item in
+    /// the list. This indicator provides a visual cue to users about which
+    /// option is currently highlighted.
     public var selectionIndicator: String = "➜"
+
+    /// The color used for displaying the currently selected item in the
+    /// selection list. This color applies to the selection indicator and the
+    /// text of the selected option.
     public var selectionColor: Color = .green
 
     public enum Error: Swift.Error {
