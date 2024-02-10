@@ -68,8 +68,3 @@ enhancements.
 
 Swift ANSI Picker is available under the MIT license. See the
 [LICENSE](/LICENSE) file for more info.
-
-## Requirements
-
-- macOS 10.15+
-- Swift 5.3+
