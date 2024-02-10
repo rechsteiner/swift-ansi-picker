@@ -9,6 +9,8 @@ the code into your project and modify it as necessary. Alternatively,
 look into using a more feature-full package like
 [ConsoleKit](https://github.com/vapor/console-kit).
 
+https://github.com/rechsteiner/swift-ansi-picker/assets/1238984/94eeac6c-75c7-4c66-9410-bc6a4b14a50f
+
 ## Usage
 
 ### Basic usage
@@ -50,7 +52,7 @@ print(try picker.choose(["Apple", "Banana", "Orange", "Watermelon"]))
 Add swift-ansi-picker to your Package.swift file:
 
 ```swift
-.package(url: "https://github.com/rechsteiner/swift-ansi-picker.git", .exact(from: "1.0.0"))
+.package(url: "https://github.com/rechsteiner/swift-ansi-picker.git", .exact(from: "0.0.1"))
 ```
 
 ## Contributions
