@@ -3,6 +3,9 @@ import PackageDescription
 
 let package = Package(
     name: "swift-ansi-picker",
+    products: [
+        .library(name: "Picker", targets: ["Picker"]),
+    ],
     dependencies: [],
     targets: [
         .target(
