@@ -16,6 +16,8 @@ https://github.com/rechsteiner/swift-ansi-picker/assets/1238984/94eeac6c-75c7-4c
 ### Basic usage
 
 ```swift
+import Picker
+
 try choose(["Apple", "Banana", "Orange", "Watermelon"])
 ```
 
