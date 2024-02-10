@@ -5,9 +5,15 @@ let package = Package(
     name: "swift-ansi-picker",
     dependencies: [],
     targets: [
+        .target(
+            name: "Picker",
+            dependencies: [],
+            path: "Sources"
+        ),
         .executableTarget(
-            name: "swift-ansi-picker",
-            dependencies: []
+            name: "example",
+            dependencies: ["Picker"],
+            path: "Examples"
         )
     ]
 )
